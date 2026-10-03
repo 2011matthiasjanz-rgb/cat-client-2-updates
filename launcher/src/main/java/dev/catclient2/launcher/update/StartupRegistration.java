@@ -25,16 +25,19 @@ public class StartupRegistration {
             Path installDir = installDir();
             if (installDir == null) return; // Not running from an installed location (e.g. dev/IDE run).
 
-            Path javaw = installDir.resolve("runtime").resolve("bin").resolve("javaw.exe");
-            Path updateCheckerJar = installDir.resolve("app").resolve("cat-client-2-update-checker.jar");
-            if (!Files.isRegularFile(javaw) || !Files.isRegularFile(updateCheckerJar)) return;
+            // A secondary jpackage launcher (see launcher/installer/update-checker-launcher.properties
+            // and the --add-launcher wiring in build.gradle.kts), not a raw "javaw -jar" invocation:
+            // jpackage's default jlink-trimmed runtime has no java/javaw executable at all, only
+            // whichever native launcher(s) jpackage itself generates.
+            Path updateCheckerExe = installDir.resolve("Cat Client 2 Update Checker.exe");
+            if (!Files.isRegularFile(updateCheckerExe)) return;
 
             Path startupFolder = Path.of(System.getenv("APPDATA"),
                 "Microsoft", "Windows", "Start Menu", "Programs", "Startup");
             Path shortcut = startupFolder.resolve("Cat Client 2 Update Checker.lnk");
             if (Files.exists(shortcut)) return;
 
-            createShortcut(shortcut, javaw, updateCheckerJar);
+            createShortcut(shortcut, updateCheckerExe);
         } catch (Exception e) {
             System.err.println("[cat-client] Could not register the startup update checker: " + e.getMessage());
         }
@@ -52,18 +55,17 @@ public class StartupRegistration {
         }
     }
 
-    private static void createShortcut(Path shortcut, Path target, Path jar) throws IOException, InterruptedException {
+    private static void createShortcut(Path shortcut, Path target) throws IOException, InterruptedException {
         Files.createDirectories(shortcut.getParent());
 
         String script = """
             $shell = New-Object -ComObject WScript.Shell
             $s = $shell.CreateShortcut('%s')
             $s.TargetPath = '%s'
-            $s.Arguments = '-jar "%s"'
             $s.WindowStyle = 7
             $s.Description = 'Checks for Cat Client 2 updates'
             $s.Save()
-            """.formatted(shortcut, target, jar);
+            """.formatted(shortcut, target);
 
         Path scriptFile = Files.createTempFile("cat-client-2-startup-shortcut", ".ps1");
         try {

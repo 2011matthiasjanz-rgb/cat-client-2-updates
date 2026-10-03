@@ -126,6 +126,12 @@ tasks.register<Exec>("jpackage") {
         mkdir(jpackageOutputDir)
     }
 
+    // jpackage's default jlink-built runtime has no java/javaw executable (only the native launcher
+    // it generates) - a plain "javaw -jar someOtherJar" against that runtime does not exist. The
+    // update-checker therefore needs its own native launcher sharing this same install+runtime,
+    // which --add-launcher creates from the properties file below.
+    val updateCheckerLauncherProps = file("installer/update-checker-launcher.properties")
+
     val args = mutableListOf(
         "--type", "exe",
         "--name", "Cat Client 2",
@@ -139,7 +145,15 @@ tasks.register<Exec>("jpackage") {
         "--win-dir-chooser",
         "--win-menu",
         "--win-shortcut",
-        "--win-upgrade-uuid", "6f1d2c8e-6b34-4a0a-9f7a-2b1f4c9d8e3a"
+        "--win-upgrade-uuid", "6f1d2c8e-6b34-4a0a-9f7a-2b1f4c9d8e3a",
+        "--add-launcher", "Cat Client 2 Update Checker=${updateCheckerLauncherProps.absolutePath}",
+        // jpackage's default jlink options include --strip-native-commands, which deletes
+        // java.exe/javaw.exe from the bundled runtime entirely. The launcher itself needs a real
+        // java executable at runtime to spawn Minecraft and the Fabric installer as subprocesses
+        // (see GameLauncher.javaBinary() / FabricInstaller.install(), both of which shell out to
+        // "<runtime>/bin/java.exe") - so that one strip option must be dropped, keeping the other
+        // three (safe: they only remove debug symbols/docs, nothing executable).
+        "--jlink-options", "--strip-debug --no-man-pages --no-header-files"
     )
     if (appIcon.exists()) args += listOf("--icon", appIcon.absolutePath)
 

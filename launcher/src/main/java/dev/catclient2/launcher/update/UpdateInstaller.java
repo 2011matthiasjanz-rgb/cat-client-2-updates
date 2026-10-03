@@ -24,11 +24,13 @@ public class UpdateInstaller {
     }
 
     /**
-     * Blocks on network I/O - call off the Swing event thread. On success this method does not
-     * return: it calls {@link System#exit} once the installer has been launched, since the running
-     * launcher's own files are about to be replaced out from under it.
+     * Downloads the installer and starts it silently, returning the running installer process.
+     * Blocks on network I/O - call off the Swing event thread. The caller is responsible for exiting
+     * its own process once it is done with the returned {@link Process} (e.g. immediately, if it is
+     * about to be replaced anyway, or after {@link Process#waitFor()} if it wants to report
+     * completion first) - a launcher whose own files are being overwritten should not keep running.
      */
-    public static void install(UpdateInfo info) throws IOException, InterruptedException {
+    public static Process install(UpdateInfo info) throws IOException, InterruptedException {
         Path updateDir = OperatingSystem.instanceRoot().resolve("update");
         Files.createDirectories(updateDir);
         Path installer = updateDir.resolve("cat-client-2-installer.exe");
@@ -38,8 +40,6 @@ public class UpdateInstaller {
         ProcessBuilder builder = new ProcessBuilder(List.of(installer.toString(), "-q"));
         builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);
-        builder.start();
-
-        System.exit(0);
+        return builder.start();
     }
 }

@@ -29,6 +29,7 @@ import dev.catclient2.launcher.ui.CosmeticsScreen;
 import dev.catclient2.launcher.ui.FriendsScreen;
 import dev.catclient2.launcher.ui.LauncherFrame;
 import dev.catclient2.launcher.ui.theme.CatClientTheme;
+import dev.catclient2.launcher.update.StartupRegistration;
 import dev.catclient2.launcher.update.UpdateChecker;
 import dev.catclient2.launcher.update.UpdateInfo;
 import dev.catclient2.launcher.update.UpdateInstaller;
@@ -133,9 +134,11 @@ public class Launcher {
     // ----------------------------------------------------------------- update
 
     private void checkForUpdate() {
-        new Thread(() -> UpdateChecker.checkForUpdate().ifPresent(info ->
-            SwingUtilities.invokeLater(() -> frame.getHomeScreen().showUpdateAvailable(info.version(), () -> startUpdate(info)))
-        ), "update-check").start();
+        new Thread(() -> {
+            StartupRegistration.ensureRegistered();
+            UpdateChecker.checkForUpdate().ifPresent(info ->
+                SwingUtilities.invokeLater(() -> frame.getHomeScreen().showUpdateAvailable(info.version(), () -> startUpdate(info))));
+        }, "update-check").start();
     }
 
     private void startUpdate(UpdateInfo info) {
@@ -147,7 +150,9 @@ public class Launcher {
                 SwingUtilities.invokeLater(() ->
                     frame.getHomeScreen().setUpdateStatus("Installing - the launcher will close, reopen it once it's done."));
                 UpdateInstaller.install(info);
-                // install() ends the process itself on success - if we get here, that call threw instead.
+                // The installer now runs independently of this process - safe to exit immediately,
+                // our own files are about to be overwritten anyway.
+                System.exit(0);
             } catch (Exception e) {
                 e.printStackTrace();
                 SwingUtilities.invokeLater(() -> {

@@ -84,6 +84,13 @@ listOf("installDist", "distZip", "distTar", "startScripts",
         tasks.matching { it.name == name }.configureEach { dependsOn("copyDistTemplate") }
     }
 
+// update-checker depends on this project and therefore reads its build/libs/launcher.jar output too -
+// same implicit-dependency issue as above, since copyDistTemplate also writes into that directory.
+gradle.projectsEvaluated {
+    project(":update-checker").tasks.matching { it.name == "compileJava" }
+        .configureEach { dependsOn(":launcher:copyDistTemplate") }
+}
+
 // ---------------------------------------------------------------------- jpackage
 
 // jpackage ships inside the JDK itself (since JDK 16) - no third-party Gradle plugin is needed,
@@ -92,8 +99,13 @@ val jpackageToolchain = javaToolchains.launcherFor(java.toolchain).map { it.exec
 
 val jpackageInputDir = layout.buildDirectory.dir("jpackage-input")
 val copyJarForJpackage = tasks.register<Copy>("copyJarForJpackage") {
-    dependsOn("shadowJar", "copyDistTemplate")
+    dependsOn("shadowJar", "copyDistTemplate", ":update-checker:shadowJar")
     from(tasks.named<ShadowJar>("shadowJar").map { it.archiveFile })
+    // The update-checker jar rides along as a second file in the same app/ folder jpackage creates -
+    // it is launched separately (see InstallDirs/Autostart.java), not on the app's own classpath.
+    from(project(":update-checker").tasks.named("shadowJar").map {
+        (it as ShadowJar).archiveFile
+    })
     into(jpackageInputDir)
 }
 

@@ -7,7 +7,9 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # jpackage's --type exe builds a real Windows installer via the WiX Toolset, which only makes
+    # sense (and is only pre-installed) on a Windows runner - this cannot be cross-built from Linux.
+    runs-on: windows-latest
     permissions:
       contents: write
 
@@ -24,11 +26,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build launcher
-        run: ./gradlew :launcher:build
+      - name: Build installer
+        run: ./gradlew.bat :launcher:jpackage
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: launcher/build/libs/cat-client-2-launcher.jar
+          files: launcher/build/jpackage/*.exe
           generate_release_notes: true

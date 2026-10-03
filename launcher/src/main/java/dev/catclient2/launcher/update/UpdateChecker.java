@@ -18,7 +18,6 @@ import java.util.Optional;
 public class UpdateChecker {
     private static final String LATEST_RELEASE_URL =
         "https://api.github.com/repos/2011matthiasjanz-rgb/cat-client-2-updates/releases/latest";
-    private static final String ASSET_NAME = "cat-client-2-launcher.jar";
 
     private UpdateChecker() {
     }
@@ -49,6 +48,8 @@ public class UpdateChecker {
         }
     }
 
+    /** Matches by extension rather than an exact filename, since jpackage names the installer after
+     * the app and version (e.g. "Cat Client 2-1.2.0.exe"), not a fixed name. */
     private static String findAssetUrl(JsonObject release) {
         if (!release.has("assets") || !release.get("assets").isJsonArray()) return null;
 
@@ -56,7 +57,7 @@ public class UpdateChecker {
         for (JsonElement element : assets) {
             JsonObject asset = element.getAsJsonObject();
             String name = asset.has("name") ? asset.get("name").getAsString() : "";
-            if (ASSET_NAME.equals(name) && asset.has("browser_download_url")) {
+            if (name.endsWith(".exe") && asset.has("browser_download_url")) {
                 return asset.get("browser_download_url").getAsString();
             }
         }

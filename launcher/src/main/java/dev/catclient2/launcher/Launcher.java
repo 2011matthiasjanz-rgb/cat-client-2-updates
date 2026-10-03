@@ -144,6 +144,8 @@ public class Launcher {
 
         new Thread(() -> {
             try {
+                SwingUtilities.invokeLater(() ->
+                    frame.getHomeScreen().setUpdateStatus("Installing - the launcher will close, reopen it once it's done."));
                 UpdateInstaller.install(info);
                 // install() ends the process itself on success - if we get here, that call threw instead.
             } catch (Exception e) {

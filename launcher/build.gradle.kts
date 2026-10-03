@@ -83,3 +83,53 @@ listOf("installDist", "distZip", "distTar", "startScripts",
     .forEach { name ->
         tasks.matching { it.name == name }.configureEach { dependsOn("copyDistTemplate") }
     }
+
+// ---------------------------------------------------------------------- jpackage
+
+// jpackage ships inside the JDK itself (since JDK 16) - no third-party Gradle plugin is needed,
+// just an Exec task pointed at the toolchain's own jpackage binary.
+val jpackageToolchain = javaToolchains.launcherFor(java.toolchain).map { it.executablePath }
+
+val jpackageInputDir = layout.buildDirectory.dir("jpackage-input")
+val copyJarForJpackage = tasks.register<Copy>("copyJarForJpackage") {
+    dependsOn("shadowJar", "copyDistTemplate")
+    from(tasks.named<ShadowJar>("shadowJar").map { it.archiveFile })
+    into(jpackageInputDir)
+}
+
+val jpackageOutputDir = layout.buildDirectory.dir("jpackage")
+val appIcon = file("installer/icon.ico")
+
+tasks.register<Exec>("jpackage") {
+    group = "distribution"
+    description = "Builds a native Windows installer (.exe) that bundles its own Java runtime."
+    dependsOn(copyJarForJpackage)
+
+    val jpackageBinary = jpackageToolchain.get().asFile.parentFile.resolve(
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows) "jpackage.exe" else "jpackage"
+    )
+
+    doFirst {
+        delete(jpackageOutputDir)
+        mkdir(jpackageOutputDir)
+    }
+
+    val args = mutableListOf(
+        "--type", "exe",
+        "--name", "Cat Client 2",
+        "--app-version", libs.versions.launcher.get(),
+        "--vendor", "Cat Client 2",
+        "--input", jpackageInputDir.get().asFile.absolutePath,
+        "--main-jar", "cat-client-2-launcher.jar",
+        "--main-class", "dev.catclient2.launcher.Launcher",
+        "--dest", jpackageOutputDir.get().asFile.absolutePath,
+        "--win-per-user-install",
+        "--win-dir-chooser",
+        "--win-menu",
+        "--win-shortcut",
+        "--win-upgrade-uuid", "6f1d2c8e-6b34-4a0a-9f7a-2b1f4c9d8e3a"
+    )
+    if (appIcon.exists()) args += listOf("--icon", appIcon.absolutePath)
+
+    commandLine(listOf(jpackageBinary.absolutePath) + args)
+}

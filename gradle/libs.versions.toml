@@ -37,6 +37,9 @@ waybackauthlib = "1.0.1"
 # MinecraftAuth (https://github.com/RaphiMC/MinecraftAuth)
 minecraftauth = "5.0.2"
 
+# Cat Client 2 launcher's own version - bump this and push a matching git tag to publish an update
+launcher = "1.0.0"
+
 [libraries]
 # Fabric base
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }

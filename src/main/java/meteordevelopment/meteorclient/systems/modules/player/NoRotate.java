@@ -17,6 +17,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 public class NoRotate extends Module {
     public NoRotate() {
-        super(Categories.Player, "no-rotate", "Attempts to block rotations sent from server to client.");
+        super(Categories.Player, "no-rotate", "Attempts to block rotations sent from server to client.", true);
     }
 }

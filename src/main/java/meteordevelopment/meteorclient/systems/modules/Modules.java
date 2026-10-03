@@ -415,12 +415,21 @@ public class Modules extends System<Modules> {
         add(new Hitboxes());
         add(new HoleFiller());
         add(new KillAura());
+        add(new LungeBoost());
         add(new Offhand());
+        add(new OneTap());
         add(new Quiver());
         add(new SelfAnvil());
         add(new SelfTrap());
         add(new SelfWeb());
+        add(new SpearCannon());
+        add(new SpearMace());
+        add(new SpearPhase());
+        add(new SpearProof());
+        add(new SpearReach());
+        add(new SpearSpam());
         add(new Surround());
+        add(new TotemBypass());
     }
 
     private void initPlayer() {

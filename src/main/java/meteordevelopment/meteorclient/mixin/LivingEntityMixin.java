@@ -15,6 +15,7 @@ import meteordevelopment.meteorclient.systems.modules.movement.Sprint;
 import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraFlightModes;
 import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraFly;
 import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.modes.Bounce;
+import meteordevelopment.meteorclient.systems.modules.combat.TotemBypass;
 import meteordevelopment.meteorclient.systems.modules.player.NoStatusEffects;
 import meteordevelopment.meteorclient.systems.modules.player.OffhandCrash;
 import meteordevelopment.meteorclient.systems.modules.render.HandView;
@@ -24,6 +25,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
@@ -148,5 +150,18 @@ public abstract class LivingEntityMixin extends Entity {
 
         // only add the extra velocity if you're actually moving, otherwise you'll jump in place and move forward
         return original && (Math.abs(mc.player.forwardSpeed) > 1.0E-5F || Math.abs(mc.player.sidewaysSpeed) > 1.0E-5F);
+    }
+
+    // Only has a real (server-authoritative) effect when this mod's user is hosting the world
+    // (integrated server / LAN) - tryUseDeathProtector only ever runs on the authoritative side.
+    @Inject(method = "tryUseDeathProtector", at = @At("HEAD"), cancellable = true)
+    private void meteor$bypassTotem(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
+        if (this.getEntityWorld().isClient()) return;
+
+        TotemBypass totemBypass = Modules.get().get(TotemBypass.class);
+        if (!totemBypass.isActive()) return;
+        if (source.getAttacker() != mc.player) return;
+
+        cir.setReturnValue(false);
     }
 }

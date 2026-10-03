@@ -13,6 +13,7 @@ import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.settings.Settings;
 import meteordevelopment.meteorclient.systems.config.Config;
 import meteordevelopment.meteorclient.utils.Utils;
+import meteordevelopment.meteorclient.utils.misc.CreatorUtils;
 import meteordevelopment.meteorclient.utils.misc.ISerializable;
 import meteordevelopment.meteorclient.utils.misc.Keybind;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
@@ -38,6 +39,7 @@ public abstract class Module implements ISerializable<Module>, Comparable<Module
 
     public final MeteorAddon addon;
     public final Settings settings = new Settings();
+    public final boolean creatorOnly;
 
     private boolean active;
 
@@ -51,6 +53,14 @@ public abstract class Module implements ISerializable<Module>, Comparable<Module
     public boolean favorite = false;
 
     public Module(Category category, String name, String description, String... aliases) {
+        this(category, name, description, true, aliases);
+    }
+
+    public Module(Category category, String name, String desc) {
+        this(category, name, desc, true, new String[0]);
+    }
+
+    public Module(Category category, String name, String description, boolean creatorOnly, String... aliases) {
         if (name.contains(" ")) MeteorClient.LOG.warn("Module '{}' contains invalid characters in its name making it incompatible with Meteor Client commands.", name);
 
         this.mc = MinecraftClient.getInstance();
@@ -60,6 +70,7 @@ public abstract class Module implements ISerializable<Module>, Comparable<Module
         this.description = description;
         this.aliases = aliases;
         this.color = Color.fromHsv(Utils.random(0.0, 360.0), 0.35, 1);
+        this.creatorOnly = creatorOnly;
 
         String classname = this.getClass().getName();
         for (MeteorAddon addon : AddonManager.ADDONS) {
@@ -72,10 +83,6 @@ public abstract class Module implements ISerializable<Module>, Comparable<Module
         this.addon = null;
     }
 
-    public Module(Category category, String name, String desc) {
-        this(category, name, desc, new String[0]);
-    }
-
     public WWidget getWidget(GuiTheme theme) {
         return null;
     }
@@ -84,6 +91,8 @@ public abstract class Module implements ISerializable<Module>, Comparable<Module
     public void onDeactivate() {}
 
     public void toggle() {
+        if (creatorOnly && !CreatorUtils.isCreator()) return;
+
         if (!active) {
             active = true;
             Modules.get().addActive(this);

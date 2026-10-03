@@ -10,3 +10,7 @@ pluginManagement {
 }
 
 rootProject.name = "meteor-client"
+
+include("launcher")
+include("friends-protocol")
+include("friends-server")

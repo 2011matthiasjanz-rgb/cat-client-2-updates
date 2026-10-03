@@ -305,7 +305,7 @@ public class Nametags extends Module {
     private final List<Entity> entityList = new ArrayList<>();
 
     public Nametags() {
-        super(Categories.Render, "nametags", "Displays customizable nametags above players, items and other entities.");
+        super(Categories.Render, "nametags", "Displays customizable nametags above players, items and other entities.", true);
     }
 
     private static String ticksToTime(int ticks) {

@@ -175,7 +175,7 @@ public class Chams extends Module {
     public static final Identifier BLANK = MeteorClient.identifier("textures/blank.png");
 
     public Chams() {
-        super(Categories.Render, "chams", "Tweaks rendering of entities.");
+        super(Categories.Render, "chams", "Tweaks rendering of entities.", true);
     }
 
     public boolean shouldRender(Entity entity) {

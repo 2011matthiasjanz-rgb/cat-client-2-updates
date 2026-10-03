@@ -5,6 +5,7 @@
 
 package meteordevelopment.meteorclient.systems.modules.world;
 
+import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render2DEvent;
@@ -464,7 +465,7 @@ public class HighwayBuilder extends Module {
     private final MBlockPos posRender3 = new MBlockPos();
 
     public HighwayBuilder() {
-        super(Categories.World, "highway-builder", "Automatically builds highways.");
+        super(Categories.World, "highway-builder", "Automatically builds highways.", false);
         runInMainMenu = true;
     }
 
@@ -681,6 +682,8 @@ public class HighwayBuilder extends Module {
         packetMining = null;
     }
 
+    private boolean settingState;
+
     private void setState(State state) {
         setState(state, this.state);
     }
@@ -690,7 +693,33 @@ public class HighwayBuilder extends Module {
         this.state = state;
 
         input.stop();
-        state.start(this);
+
+        // state.start() can itself call setState() (e.g. via checkTasks()). Rather than recursing directly
+        // (which can overflow the stack when states keep bouncing off each other, e.g. hotbar full errors),
+        // only the outermost call actually runs start() in a loop until the state stops changing.
+        if (settingState) return;
+
+        settingState = true;
+        try {
+            State toStart = state;
+            int transitions = 0;
+
+            while (true) {
+                State before = this.state;
+                toStart.start(this);
+                if (this.state == before) break;
+
+                if (++transitions > 64) {
+                    MeteorClient.LOG.warn("Highway Builder got stuck switching states ({} -> {}), disabling.", before, this.state);
+                    if (isActive()) toggle();
+                    break;
+                }
+
+                toStart = this.state;
+            }
+        } finally {
+            settingState = false;
+        }
     }
 
     private int getWidthLeft() {

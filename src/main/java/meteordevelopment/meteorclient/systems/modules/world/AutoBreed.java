@@ -77,7 +77,7 @@ public class AutoBreed extends Module {
     private int tickCounter = 0;
 
     public AutoBreed() {
-        super(Categories.World, "auto-breed", "Automatically breeds specified animals.");
+        super(Categories.World, "auto-breed", "Automatically breeds specified animals.", true);
     }
 
     @Override

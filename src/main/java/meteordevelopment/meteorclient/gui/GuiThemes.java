@@ -6,6 +6,8 @@
 package meteordevelopment.meteorclient.gui;
 
 import meteordevelopment.meteorclient.MeteorClient;
+import meteordevelopment.meteorclient.gui.themes.catsend.CatsEndGuiTheme;
+import meteordevelopment.meteorclient.gui.themes.classic.ClassicGuiTheme;
 import meteordevelopment.meteorclient.gui.themes.meteor.MeteorGuiTheme;
 import meteordevelopment.meteorclient.utils.PostInit;
 import meteordevelopment.meteorclient.utils.PreInit;
@@ -32,6 +34,8 @@ public class GuiThemes {
     @PreInit
     public static void init() {
         add(new MeteorGuiTheme());
+        add(new CatsEndGuiTheme());
+        add(new ClassicGuiTheme());
     }
 
     @PostInit
@@ -40,13 +44,13 @@ public class GuiThemes {
             try {
                 NbtCompound tag = NbtIo.read(FILE.toPath());
 
-                if (tag != null) select(tag.getString("currentTheme", ""));
+                if (tag != null) select(tag.getString("currentTheme", ""), false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        if (theme == null) select("Meteor");
+        if (theme == null) select("Meteor", false);
     }
 
     public static void add(GuiTheme theme) {
@@ -64,6 +68,10 @@ public class GuiThemes {
     }
 
     public static void select(String name) {
+        select(name, true);
+    }
+
+    private static void select(String name, boolean reloadResourcePack) {
         // Find theme with the provided name
         GuiTheme theme = null;
 
@@ -95,6 +103,9 @@ public class GuiThemes {
 
             // Save global gui settings with the new theme
             saveGlobal();
+
+            // Swap the built-in resource pack backing this theme's vanilla-screen look
+            ThemeResourcePacks.apply(theme.name, reloadResourcePack);
         }
     }
 

@@ -1,0 +1,106 @@
+package dev.catclient2.launcher.friends;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import dev.catclient2.launcher.util.OperatingSystem;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Launcher-side preferences for the friend system. Stored next to the instance root so it survives
+ * re-installing the game.
+ */
+public class FriendSettings {
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+
+    private String serverUrl = "http://localhost:8765";
+    private String lastServerAddress = "";
+    private boolean publishSession = true;
+    private boolean autoJoinAccepted = true;
+    private List<String> handledJoinRequests = new ArrayList<>();
+
+    private final Path file = OperatingSystem.instanceRoot().resolve("friends-settings.json");
+
+    public static FriendSettings load() {
+        FriendSettings settings = new FriendSettings();
+        if (!Files.exists(settings.file)) return settings;
+
+        try {
+            String content = Files.readString(settings.file, StandardCharsets.UTF_8);
+            FriendSettings stored = GSON.fromJson(content, FriendSettings.class);
+            if (stored != null) {
+                if (stored.serverUrl != null && !stored.serverUrl.isBlank()) settings.serverUrl = stored.serverUrl;
+                settings.lastServerAddress = stored.lastServerAddress == null ? "" : stored.lastServerAddress;
+                settings.publishSession = stored.publishSession;
+                settings.autoJoinAccepted = stored.autoJoinAccepted;
+                settings.handledJoinRequests = stored.handledJoinRequests == null ? new ArrayList<>() : stored.handledJoinRequests;
+            }
+        } catch (Exception e) {
+            System.err.println("[cat-friends] Could not read " + settings.file + ": " + e.getMessage());
+        }
+        return settings;
+    }
+
+    public void save() {
+        try {
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, GSON.toJson(this), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            System.err.println("[cat-friends] Could not write " + file + ": " + e.getMessage());
+        }
+    }
+
+    public String serverUrl() {
+        return serverUrl;
+    }
+
+    public void setServerUrl(String serverUrl) {
+        this.serverUrl = FriendApi.stripTrailingSlash(serverUrl);
+    }
+
+    public String lastServerAddress() {
+        return lastServerAddress;
+    }
+
+    public void setLastServerAddress(String lastServerAddress) {
+        this.lastServerAddress = lastServerAddress == null ? "" : lastServerAddress.trim();
+    }
+
+    public boolean publishSession() {
+        return publishSession;
+    }
+
+    public void setPublishSession(boolean publishSession) {
+        this.publishSession = publishSession;
+    }
+
+    public boolean autoJoinAccepted() {
+        return autoJoinAccepted;
+    }
+
+    public void setAutoJoinAccepted(boolean autoJoinAccepted) {
+        this.autoJoinAccepted = autoJoinAccepted;
+    }
+
+    /**
+     * Join requests already acted on, so a launcher restart does not install the same pack twice.
+     */
+    public synchronized boolean markJoinHandled(String requestId) {
+        Set<String> handled = new LinkedHashSet<>(handledJoinRequests);
+        if (!handled.add(requestId)) return false;
+        handledJoinRequests = new ArrayList<>(handled);
+        save();
+        return true;
+    }
+
+    public synchronized boolean isJoinHandled(String requestId) {
+        return handledJoinRequests.contains(requestId);
+    }
+}

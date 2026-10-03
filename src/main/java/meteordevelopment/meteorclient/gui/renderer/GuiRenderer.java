@@ -13,6 +13,7 @@ import meteordevelopment.meteorclient.gui.renderer.operations.TextOperation;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.renderer.packer.TexturePacker;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.renderer.NineSliceTexture;
 import meteordevelopment.meteorclient.renderer.Renderer2D;
 import meteordevelopment.meteorclient.renderer.Texture;
 import meteordevelopment.meteorclient.utils.PostInit;
@@ -252,6 +253,44 @@ public class GuiRenderer {
         post(() -> {
             rTex.begin();
             rTex.texQuad(x, y, width, height, rotation, 0, 0, 1, 1, WHITE);
+            rTex.end();
+
+            rTex.render(texture.getGlTextureView(), texture.getSampler());
+        });
+    }
+
+    public void nineSlice(double x, double y, double width, double height, NineSliceTexture nineSlice, Color color) {
+        Texture texture = nineSlice.texture;
+        double tw = texture.getWidth(), th = texture.getHeight();
+
+        double bl = nineSlice.borderLeft, bt = nineSlice.borderTop, br = nineSlice.borderRight, bb = nineSlice.borderBottom;
+
+        // U/V fractions for the fixed border and stretched middle
+        double u0 = 0, u1 = bl / tw, u2 = 1 - br / tw, u3 = 1;
+        double v0 = 0, v1 = bt / th, v2 = 1 - bb / th, v3 = 1;
+
+        // X/Y screen coordinates for the fixed border and stretched middle
+        double x0 = x, x1 = x + bl, x2 = x + width - br, x3 = x + width;
+        double y0 = y, y1 = y + bt, y2 = y + height - bb, y3 = y + height;
+
+        post(() -> {
+            rTex.begin();
+
+            // Corners
+            rTex.texQuad(x0, y0, x1 - x0, y1 - y0, 0, u0, v0, u1, v1, color);
+            rTex.texQuad(x2, y0, x3 - x2, y1 - y0, 0, u2, v0, u3, v1, color);
+            rTex.texQuad(x0, y2, x1 - x0, y3 - y2, 0, u0, v2, u1, v3, color);
+            rTex.texQuad(x2, y2, x3 - x2, y3 - y2, 0, u2, v2, u3, v3, color);
+
+            // Edges (stretched along one axis)
+            rTex.texQuad(x1, y0, x2 - x1, y1 - y0, 0, u1, v0, u2, v1, color);
+            rTex.texQuad(x1, y2, x2 - x1, y3 - y2, 0, u1, v2, u2, v3, color);
+            rTex.texQuad(x0, y1, x1 - x0, y2 - y1, 0, u0, v1, u1, v2, color);
+            rTex.texQuad(x2, y1, x3 - x2, y2 - y1, 0, u2, v1, u3, v2, color);
+
+            // Center (stretched both axes)
+            rTex.texQuad(x1, y1, x2 - x1, y2 - y1, 0, u1, v1, u2, v2, color);
+
             rTex.end();
 
             rTex.render(texture.getGlTextureView(), texture.getSampler());

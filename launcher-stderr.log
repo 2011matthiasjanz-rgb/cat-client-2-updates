@@ -1,0 +1,2 @@
+[cat-client] Update check failed: GET https://api.github.com/repos/2011matthiasjanz-rgb/cat-client-2-updates/releases/latest failed with status 404
+[cat-client] Could not load raw skin for 0941ce77-5ee1-49d7-b496-dbf0e395a0bb: Crafatar returned status 500

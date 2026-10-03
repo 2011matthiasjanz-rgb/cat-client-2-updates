@@ -1,19 +1,17 @@
 {
   "schemaVersion": 1,
-  "name": "Meteor Client",
+  "name": "Cat Client 2",
   "id": "meteor-client",
   "version": "${version}",
-  "description": "Based utility mod.",
+  "description": "Cat Client 2 - a Meteor Client fork with cat-themed GUI styles.",
   "authors": [
     "MineGame159",
     "squidoodly",
     "seasnail"
   ],
   "contact": {
-    "homepage": "https://meteorclient.com",
     "issues": "https://github.com/MeteorDevelopment/meteor-client/issues",
-    "sources": "https://github.com/MeteorDevelopment/meteor-client",
-    "discord": "https://meteorclient.com/discord"
+    "sources": "https://github.com/MeteorDevelopment/meteor-client"
   },
   "license": "GPL-3.0",
   "icon": "assets/meteor-client/icon.png",
@@ -37,13 +35,8 @@
   "accessWidener": "meteor-client.accesswidener",
   "custom": {
     "meteor-client:build_number": "${build_number}",
-    "meteor-client:color": "145,61,226",
+    "meteor-client:color": "255,169,77",
     "meteor-client:commit": "${commit}",
-    "modmenu": {
-      "links": {
-        "modmenu.discord": "https://meteorclient.com/discord"
-      }
-    },
     "badoptimizations:cache_hooks": {
       "lightmap": "meteordevelopment.meteorclient.modintegration.BadOptimizationsHook"
     }

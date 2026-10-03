@@ -310,7 +310,7 @@ public class AttributeSwap extends Module {
     private boolean awaitingBack;
 
     public AttributeSwap() {
-        super(Categories.Combat, "attribute-swap", "Swaps to a target slot when you attack.");
+        super(Categories.Combat, "attribute-swap", "Swaps to a target slot when you attack.", true);
     }
 
     @Override

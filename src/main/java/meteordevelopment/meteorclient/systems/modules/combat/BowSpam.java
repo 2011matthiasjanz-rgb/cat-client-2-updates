@@ -69,7 +69,7 @@ public class BowSpam extends Module {
     private int ticks = 0;
 
     public BowSpam() {
-        super(Categories.Combat, "bow-spam", "Spams bows and crossbows.", "auto-bow", "crossbow-spam", "auto-crossbow");
+        super(Categories.Combat, "bow-spam", "Spams bows and crossbows.", true, "auto-bow", "crossbow-spam", "auto-crossbow");
     }
 
     @Override

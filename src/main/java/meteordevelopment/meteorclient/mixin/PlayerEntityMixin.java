@@ -13,17 +13,22 @@ import meteordevelopment.meteorclient.events.entity.player.ClipAtLedgeEvent;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.movement.Flight;
 import meteordevelopment.meteorclient.systems.modules.movement.NoSlow;
+import meteordevelopment.meteorclient.mixininterface.IMeteorTntEntity;
+import meteordevelopment.meteorclient.systems.modules.combat.SpearCannon;
 import meteordevelopment.meteorclient.systems.modules.movement.Sprint;
 import meteordevelopment.meteorclient.systems.modules.player.Reach;
 import meteordevelopment.meteorclient.systems.modules.player.SpeedMine;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.TntEntity;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -32,6 +37,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
@@ -132,5 +138,18 @@ public abstract class PlayerEntityMixin extends LivingEntity {
     @ModifyReturnValue(method = "getEntityInteractionRange", at = @At("RETURN"))
     private double modifyEntityInteractionRange(double original) {
         return Math.max(0, original + Modules.get().get(Reach.class).entityReach());
+    }
+
+    // Only has a real (server-authoritative) effect when this mod's user is hosting the world
+    // (integrated server / LAN) - the TntEntityMixin.tick() homing hook only runs authoritatively
+    // on that side. On any other server this attack behaves exactly like normal vanilla knockback.
+    @Inject(method = "attack", at = @At("HEAD"))
+    private void meteor$markSpearCannonTarget(Entity target, CallbackInfo ci) {
+        if (getEntityWorld().isClient()) return;
+        if (!(target instanceof TntEntity tntEntity)) return;
+        if (!((PlayerEntity) (Object) this).getWeaponStack().isIn(ItemTags.SPEARS)) return;
+        if (!Modules.get().get(SpearCannon.class).isActive()) return;
+
+        ((IMeteorTntEntity) tntEntity).meteor$markAsCannonTarget();
     }
 }

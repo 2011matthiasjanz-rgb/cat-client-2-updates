@@ -55,7 +55,16 @@ public class Launcher {
 
     /** The session currently being installed, so two joins cannot run at once. */
     private volatile JoinSession joining;
-    private volatile boolean gameRunning;
+    private volatile GameState gameState = GameState.IDLE;
+
+    /** Where the launcher is in the play lifecycle; the progress card used to never leave LAUNCHING. */
+    private enum GameState {
+        IDLE,
+        LAUNCHING,
+        RUNNING,
+        EXITED,
+        FAILED
+    }
 
     public static void main(String[] args) {
         CatClientTheme.install();
@@ -292,7 +301,7 @@ public class Launcher {
         authManager.logOut();
         currentSession = null;
         joining = null;
-        gameRunning = false;
+        gameState = GameState.IDLE;
         frame.getLoginScreen().setStatus(" ");
         frame.getFriendsScreen().setStatus(" ");
         frame.getHomeScreen().setFriendsBadge(0);
@@ -318,9 +327,11 @@ public class Launcher {
         frame.getHomeScreen().getPlayButton().setEnabled(false);
         frame.showCard(LauncherFrame.CARD_PROGRESS);
         frame.getProgressScreen().setProgress(-1);
+        gameState = GameState.LAUNCHING;
 
         int memoryGb = frame.getSettingsScreen().getMemorySlider().getValue();
 
+        // Runs off the EDT: installing, launching and waiting for the game must never block the UI.
         new Thread(() -> {
             publisher.stop();
             try {
@@ -339,41 +350,79 @@ public class Launcher {
                 GameLauncher gameLauncher = new GameLauncher(instanceDir);
                 Process game = gameLauncher.launch(LauncherConfig.MINECRAFT_VERSION, vanillaMeta, fabricVersionId, currentSession, memoryGb, extraGameArgs);
 
-                gameRunning = true;
+                // The process exists: this is the transition the progress card was missing, which
+                // is why it used to sit on "Launching Minecraft..." for the whole session.
+                gameState = GameState.RUNNING;
+                SwingUtilities.invokeLater(this::onGameStarted);
                 SwingUtilities.invokeLater(this::startPublishing);
 
                 int exitCode = game.waitFor();
-                gameRunning = false;
+
+                gameState = exitCode == 0 ? GameState.EXITED : GameState.FAILED;
                 publisher.stop();
                 SwingUtilities.invokeLater(this::updateSessionUi);
+
                 if (exitCode != 0) {
-                    throw new IOException("Minecraft exited with code " + exitCode + " (see the log above)");
+                    SwingUtilities.invokeLater(() -> {
+                        frame.getProgressScreen().setStatus("Failed: Minecraft exited with code " + exitCode + " (see the log above)");
+                        frame.getHomeScreen().getPlayButton().setEnabled(true);
+                        gameState = GameState.FAILED;
+                    });
+                    return;
                 }
 
                 SwingUtilities.invokeLater(() -> {
                     frame.getHomeScreen().getPlayButton().setEnabled(true);
+                    frame.getHomeScreen().setNotice("Minecraft has exited.");
                     frame.showCard(LauncherFrame.CARD_HOME);
+                    updateSessionUi();
                 });
             } catch (Exception ex) {
                 ex.printStackTrace();
-                gameRunning = false;
+                gameState = GameState.FAILED;
                 SwingUtilities.invokeLater(() -> {
                     frame.getProgressScreen().setStatus("Failed: " + ex.getMessage());
                     frame.getHomeScreen().getPlayButton().setEnabled(true);
+                    updateSessionUi();
                 });
             }
         }, "play").start();
     }
 
+    /** Leaves LAUNCHING as soon as the game process is up, so the launcher stays usable. */
+    private void onGameStarted() {
+        frame.getHomeScreen().getPlayButton().setEnabled(true);
+        frame.getHomeScreen().setNotice("Minecraft is running. Your session is published while you are in a world.");
+        frame.showCard(LauncherFrame.CARD_HOME);
+        updateSessionUi();
+    }
+
     /** Publishes this session so friends can ask to join and get the modpack installed. */
     private void startPublishing() {
-        if (!friendSettings.publishSession() || !friends.connected()) {
+        // Both bail-outs used to return silently, which surfaced as "not in game" for the whole
+        // session with no hint at the real cause.
+        if (!friendSettings.publishSession()) {
+            publisher.setUnavailableReason("session publishing is turned off in the settings");
             updateSessionUi();
             return;
         }
 
-        publisher.start(status -> SwingUtilities.invokeLater(() -> frame.getFriendsScreen().setStatus(status)));
-        updateSessionUi();
+        if (!friends.connected()) {
+            publisher.setUnavailableReason("not connected to the friend service (" + friends.status() + ")");
+            updateSessionUi();
+            return;
+        }
+
+        publisher.start(this::onPublisherStateChanged, this::onPublisherStatus);
+    }
+
+    /** The publisher worker runs off the EDT, so every callback hops back onto it. */
+    private void onPublisherStateChanged() {
+        SwingUtilities.invokeLater(this::updateSessionUi);
+    }
+
+    private void onPublisherStatus(String status) {
+        SwingUtilities.invokeLater(() -> frame.getFriendsScreen().setStatus(status));
     }
 
     // ---------------------------------------------------------------- friends
@@ -424,10 +473,12 @@ public class Launcher {
         screen.setAddress(publisher.address());
 
         JoinSession current = publisher.current();
-        if (current == null) {
-            screen.setSessionInfo("Your session: not in game - start Minecraft so friends can join you");
-        } else {
-            StringBuilder info = new StringBuilder("Your session: Minecraft ")
+        String reason = publisher.unavailableReason();
+
+        if (reason != null) {
+            screen.setSessionInfo("Session unavailable: " + reason);
+        } else if (current != null) {
+            StringBuilder info = new StringBuilder("Session published: Minecraft ")
                 .append(current.minecraftVersion()).append(" / ").append(current.loader())
                 .append(' ').append(current.loaderVersion()).append(" / ")
                 .append(current.modCount()).append(" mods");
@@ -436,8 +487,21 @@ public class Launcher {
                 if (current.publicAddress() != null && !current.publicAddress().isBlank()) {
                     info.append(" (internet: ").append(current.publicAddress()).append(':').append(current.publicPort()).append(')');
                 }
+            } else {
+                info.append(" - ").append(publisher.inGame()
+                    ? "open the world to LAN so friends have an address to join"
+                    : "waiting for a world");
             }
             screen.setSessionInfo(info.toString());
+        } else if (publisher.publishing()) {
+            screen.setSessionInfo("Your session: publishing...");
+        } else if (gameState != GameState.RUNNING) {
+            // Only reported when the game is genuinely not up; a null session alone can also mean
+            // "still loading", "no world open" or "publishing failed".
+            screen.setSessionInfo("Your session: not in game - start Minecraft so friends can join you");
+        } else {
+            screen.setSessionInfo("Your session: Minecraft is running - "
+                + (publisher.inGame() ? "preparing your session..." : "enter a world so friends can join you"));
         }
 
         if (LanAddressDetector.behindNat()) {
@@ -448,6 +512,11 @@ public class Launcher {
         if (publisher.isRunning() && publisher.current() != null && publisher.current().publicAddress() != null
             && !publisher.current().publicAddress().isBlank()) {
             screen.setAddressHint("UPnP opened the port automatically - friends outside your network can connect");
+        }
+
+        String saveError = friendSettings.lastSaveError();
+        if (saveError != null) {
+            screen.setAddressHint("Settings could not be saved: " + saveError);
         }
     }
 
@@ -482,7 +551,7 @@ public class Launcher {
             frame.getHomeScreen().setNotice(next.host().name() + " allowed you to join but is not in game right now");
             return;
         }
-        if (gameRunning) {
+        if (gameState == GameState.RUNNING || gameState == GameState.LAUNCHING) {
             frame.getHomeScreen().setNotice(next.host().name() + " allowed you to join - quit Minecraft, then join from the friends screen");
             return;
         }
@@ -572,9 +641,12 @@ public class Launcher {
                 Process game = gameLauncher.launch(prepared.minecraftVersion(), prepared.vanillaMeta(),
                     prepared.fabricVersionId(), account, memoryGb, JoinInstaller.quickPlayArgs(session));
 
-                gameRunning = true;
+                gameState = GameState.RUNNING;
+                SwingUtilities.invokeLater(() -> frame.getHomeScreen().setNotice(
+                    "Minecraft is running - auto-connecting to " + session.host().name() + "'s world"));
+
                 int exitCode = game.waitFor();
-                gameRunning = false;
+                gameState = exitCode == 0 ? GameState.EXITED : GameState.FAILED;
 
                 SwingUtilities.invokeLater(() -> {
                     joining = null;

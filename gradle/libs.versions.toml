@@ -38,7 +38,7 @@ waybackauthlib = "1.0.1"
 minecraftauth = "5.0.2"
 
 # Cat Client 2 launcher's own version - bump this and push a matching git tag to publish an update
-launcher = "1.4.0"
+launcher = "1.5.0"
 
 [libraries]
 # Fabric base

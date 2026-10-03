@@ -26,7 +26,7 @@ public class FriendSettings {
     private boolean autoJoinAccepted = true;
     private List<String> handledJoinRequests = new ArrayList<>();
 
-    private final Path file = OperatingSystem.instanceRoot().resolve("friends-settings.json");
+    private transient final Path file = OperatingSystem.instanceRoot().resolve("friends-settings.json");
 
     public static FriendSettings load() {
         FriendSettings settings = new FriendSettings();
@@ -48,13 +48,30 @@ public class FriendSettings {
         return settings;
     }
 
+    /** Last serialization failure, so callers can surface it instead of silently losing the write. */
+    private volatile String lastSaveError;
+
     public void save() {
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, GSON.toJson(this), StandardCharsets.UTF_8);
+            lastSaveError = null;
         } catch (IOException e) {
+            lastSaveError = e.getMessage();
             System.err.println("[cat-friends] Could not write " + file + ": " + e.getMessage());
+        } catch (RuntimeException e) {
+            // Gson throws JsonIOException, which is unchecked: it used to escape save() and abort
+            // whatever the caller was doing (publishing a session, for one). It is reported instead
+            // of propagated, but never hidden - the stack trace names the offending field.
+            lastSaveError = e.getMessage();
+            System.err.println("[cat-friends] Could not serialize " + file + ": " + e);
+            e.printStackTrace();
         }
+    }
+
+    /** The message of the last failed {@link #save()}, or null when the last write succeeded. */
+    public String lastSaveError() {
+        return lastSaveError;
     }
 
     public String serverUrl() {

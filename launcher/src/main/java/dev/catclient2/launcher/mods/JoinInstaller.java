@@ -201,15 +201,23 @@ public final class JoinInstaller {
 
     /**
      * Arguments that make the game connect to the host right after it starts, instead of
-     * leaving the joiner in the main menu. Uses the public address when one was forwarded,
-     * otherwise the LAN address (which avoids hairpin NAT on the host's own router).
+     * leaving the joiner in the main menu. Prefers a direct connection (same LAN, or a
+     * UPnP-forwarded public address) since it has no extra latency and no dependency on a
+     * third-party relay; falls back to the internet relay only when neither is available.
      */
     public static List<String> quickPlayArgs(JoinSession session) {
         String local = LanAddressDetector.localAddress();
-        String target = PublicAddressResolver.chooseFor(session.address(), session.publicAddress(), local);
-        if (target == null || target.isBlank()) return List.of();
+        String direct = PublicAddressResolver.chooseFor(session.address(), session.publicAddress(), local);
 
-        int port = session.publicPort() > 0 ? session.publicPort() : session.port();
-        return List.of("--quickPlayMultiplayer", target + ":" + port);
+        if (direct != null && !direct.isBlank()) {
+            int port = session.publicPort() > 0 ? session.publicPort() : session.port();
+            return List.of("--quickPlayMultiplayer", direct + ":" + port);
+        }
+
+        if (!session.relayAddress().isBlank() && session.relayPort() > 0) {
+            return List.of("--quickPlayMultiplayer", session.relayAddress() + ":" + session.relayPort());
+        }
+
+        return List.of();
     }
 }

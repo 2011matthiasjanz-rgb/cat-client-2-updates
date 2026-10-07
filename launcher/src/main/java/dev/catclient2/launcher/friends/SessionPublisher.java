@@ -7,10 +7,12 @@ import dev.catclient2.launcher.instance.GameStateReader;
 import dev.catclient2.launcher.instance.LanAddressDetector;
 import dev.catclient2.launcher.instance.PortForwarder;
 import dev.catclient2.launcher.instance.PublicAddressResolver;
+import dev.catclient2.launcher.instance.RelayClient;
 import dev.catclient2.launcher.mods.JoinPackBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -39,6 +41,9 @@ public class SessionPublisher {
     /** Upper bound for joining the old worker in {@link #stop()} before a new one may take over. */
     private static final long STOP_JOIN_MILLIS = 5_000;
 
+    private static final String RELAY_HOST = "cat-client-2-relay.up.railway.app";
+    private static final int RELAY_CONTROL_PORT = 8766;
+
     private final FriendService friends;
     private final Path instanceDir;
     private final GameStateReader gameState;
@@ -51,6 +56,8 @@ public class SessionPublisher {
     private volatile JoinSession current;
     private volatile int hostedPort = -1;
     private volatile boolean portForwarded;
+    private volatile RelayClient relayClient;
+    private volatile String sessionToken;
     private volatile boolean rebuildRequested;
     private volatile boolean publishing;
     private volatile String unavailableReason;
@@ -259,6 +266,7 @@ public class SessionPublisher {
         current = null;
         hostedPort = -1;
         portForwarded = false;
+        closeRelay();
 
         if (session != null) {
             if (wasForwarded(session)) PortForwarder.close(session.port(), "TCP");
@@ -281,6 +289,7 @@ public class SessionPublisher {
         current = null;
         hostedPort = -1;
         portForwarded = false;
+        closeRelay();
         publishing = false;
 
         if (session != null) {
@@ -288,6 +297,13 @@ public class SessionPublisher {
             friends.unpublishSession();
         }
         notifyStateChanged();
+    }
+
+    private void closeRelay() {
+        RelayClient client = relayClient;
+        relayClient = null;
+        sessionToken = null;
+        if (client != null) client.close();
     }
 
     // ------------------------------------------------------------------ publish
@@ -349,9 +365,31 @@ public class SessionPublisher {
                 }
             }
 
+            // Attempted in parallel with (not instead of) UPnP: whichever ends up usable, the LAN/
+            // UPnP path is always preferred by the joiner (see JoinInstaller.quickPlayArgs), so this
+            // is purely a fallback for when neither LAN nor UPnP works.
+            if (port > 0 && (relayClient == null || !relayClient.isAlive())) {
+                sessionToken = UUID.randomUUID().toString();
+                boolean ownServer = friends.settings().relayViaOwnServer();
+                String relayHost = ownServer ? friends.settings().ownRelayHost() : RELAY_HOST;
+                int relayControlPort = ownServer ? friends.settings().ownRelayPort() : RELAY_CONTROL_PORT;
+
+                if (!ownServer || !relayHost.isBlank()) {
+                    relayClient = RelayClient.start(relayHost, relayControlPort, sessionToken, port, ownServer, onStatus);
+                }
+            }
+
+            String relayAddress = "";
+            int relayPort = 0;
+            RelayClient.Connected relayInfo = relayClient == null ? null : relayClient.info();
+            if (relayInfo != null) {
+                relayAddress = relayInfo.externalHost();
+                relayPort = relayInfo.externalPort();
+            }
+
             JoinSession session = JoinPackBuilder.build(host, LauncherConfig.MINECRAFT_VERSION, "fabric",
                 LauncherConfig.LOADER_VERSION, instanceDir, localAddress, port,
-                publicAddress, publicPort, onStatus);
+                publicAddress, publicPort, relayAddress, relayPort, onStatus);
 
             if (addressSetByUs && localAddress != null && !localAddress.isBlank()) {
                 this.address = localAddress + ":" + port;

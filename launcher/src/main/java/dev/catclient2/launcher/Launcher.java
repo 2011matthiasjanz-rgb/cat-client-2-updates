@@ -93,6 +93,24 @@ public class Launcher {
             friends.setServerUrl(frame.getSettingsScreen().getServerUrlField().getText());
             connectFriends();
         });
+        frame.getSettingsScreen().getApplyRelayButton().addActionListener(e -> {
+            boolean ownServer = frame.getSettingsScreen().getOwnRelayCheckBox().isSelected();
+            String hostPort = frame.getSettingsScreen().getOwnRelayField().getText().trim();
+            friendSettings.setRelayMode(ownServer ? "own-server" : "railway");
+
+            String host = hostPort;
+            int port = 25565;
+            int colon = hostPort.lastIndexOf(':');
+            if (colon > 0 && colon < hostPort.length() - 1) {
+                try {
+                    port = Integer.parseInt(hostPort.substring(colon + 1));
+                    host = hostPort.substring(0, colon);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            friendSettings.setOwnRelay(host, port);
+            friendSettings.save();
+        });
         frame.getFriendsScreen().getAddButton().addActionListener(e ->
             addFriend(frame.getFriendsScreen().getAddField().getText()));
         frame.getFriendsScreen().getPublishButton().addActionListener(e ->
@@ -119,6 +137,9 @@ public class Launcher {
             frame.getHomeScreen().getNewServerAddressField().setText("");
         });
         frame.getSettingsScreen().setServerUrl(friendSettings.serverUrl());
+        String ownRelayText = friendSettings.ownRelayHost().isBlank() ? "" :
+            friendSettings.ownRelayHost() + ":" + friendSettings.ownRelayPort();
+        frame.getSettingsScreen().setOwnRelay(friendSettings.relayViaOwnServer(), ownRelayText);
         frame.getFriendsScreen().setAddress(friendSettings.lastServerAddress());
         frame.getSettingsScreen().setInstanceDirText(instanceDir.toString());
         frame.getSettingsScreen().setFooterText("Cat Client 2 launcher");

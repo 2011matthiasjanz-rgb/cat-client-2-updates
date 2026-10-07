@@ -32,11 +32,14 @@ public final class JoinPackBuilder {
      * @param publicAddress the routable address for friends outside the host's network, empty
      *                      when no port forward is available
      * @param publicPort   the port reachable at {@code publicAddress}
+     * @param relayAddress the internet relay's address, empty when not connected to one
+     * @param relayPort    the relay's port exclusively assigned to this session
      * @param onStatus     progress text for the launcher UI
      */
     public static JoinSession build(AccountView host, String minecraftVersion, String loader, String loaderVersion,
                                     Path instanceDir, String address, int port,
-                                    String publicAddress, int publicPort, Consumer<String> onStatus)
+                                    String publicAddress, int publicPort,
+                                    String relayAddress, int relayPort, Consumer<String> onStatus)
         throws IOException {
 
         List<InstalledMod> installed = InstalledMods.scan(instanceDir, false);
@@ -67,6 +70,7 @@ public final class JoinPackBuilder {
             address == null ? "" : address, port, requirements, LauncherConfig.MINECRAFT_VERSION, joinable,
             System.currentTimeMillis(),
             joinable ? null : "open a world (or a server) in game so friends have an address to join",
-            publicAddress == null ? "" : publicAddress, publicPort);
+            publicAddress == null ? "" : publicAddress, publicPort,
+            relayAddress == null ? "" : relayAddress, relayPort);
     }
 }

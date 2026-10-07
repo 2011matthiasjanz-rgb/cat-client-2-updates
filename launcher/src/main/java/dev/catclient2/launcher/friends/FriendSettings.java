@@ -25,6 +25,10 @@ public class FriendSettings {
     private boolean publishSession = true;
     private boolean autoJoinAccepted = true;
     private List<String> handledJoinRequests = new ArrayList<>();
+    /** "railway" (the shared friends-relay service) or "own-server" (a Minecraft server running relay-forge-mod). */
+    private String relayMode = "railway";
+    private String ownRelayHost = "";
+    private int ownRelayPort = 25565;
 
     private transient final Path file = OperatingSystem.instanceRoot().resolve("friends-settings.json");
 
@@ -41,6 +45,9 @@ public class FriendSettings {
                 settings.publishSession = stored.publishSession;
                 settings.autoJoinAccepted = stored.autoJoinAccepted;
                 settings.handledJoinRequests = stored.handledJoinRequests == null ? new ArrayList<>() : stored.handledJoinRequests;
+                if (stored.relayMode != null && !stored.relayMode.isBlank()) settings.relayMode = stored.relayMode;
+                settings.ownRelayHost = stored.ownRelayHost == null ? "" : stored.ownRelayHost;
+                settings.ownRelayPort = stored.ownRelayPort > 0 ? stored.ownRelayPort : 25565;
             }
         } catch (Exception e) {
             System.err.println("[cat-friends] Could not read " + settings.file + ": " + e.getMessage());
@@ -104,6 +111,27 @@ public class FriendSettings {
 
     public void setAutoJoinAccepted(boolean autoJoinAccepted) {
         this.autoJoinAccepted = autoJoinAccepted;
+    }
+
+    public boolean relayViaOwnServer() {
+        return "own-server".equals(relayMode);
+    }
+
+    public void setRelayMode(String relayMode) {
+        this.relayMode = relayMode == null || relayMode.isBlank() ? "railway" : relayMode;
+    }
+
+    public String ownRelayHost() {
+        return ownRelayHost;
+    }
+
+    public int ownRelayPort() {
+        return ownRelayPort;
+    }
+
+    public void setOwnRelay(String host, int port) {
+        this.ownRelayHost = host == null ? "" : host.trim();
+        this.ownRelayPort = port > 0 ? port : 25565;
     }
 
     /**

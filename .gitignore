@@ -16,3 +16,7 @@ logs
 .idea/*
 !.idea/copyright/*
 !.idea/scopes/*
+
+# Machine-local JDK path override for relay-forge-mod's separate Gradle project (needs Java 17,
+# which may not be on PATH) - every contributor points this at their own JDK 17 install.
+relay-forge-mod/gradle.properties

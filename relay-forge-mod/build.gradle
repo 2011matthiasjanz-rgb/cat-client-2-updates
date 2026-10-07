@@ -1,0 +1,66 @@
+// Standalone Forge 1.20.1 mod, deliberately isolated from the root project's Fabric Loom setup
+// (different mod loader, different Minecraft version) - see Teil 2 of the friends-relay plan.
+// ForgeGradle is not on the Gradle Plugin Portal, so it needs the legacy buildscript application
+// instead of the plugins {} block used everywhere else in this repo.
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.+', changing: true
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+version = '1.0.0'
+group = 'dev.catclient2.relayforge'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+
+    runs {
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            jvmArg '-Dmixin.debug.export=true'
+            jvmArg '-Dmixin.debug.verbose=true'
+            jvmArg '-Dmixin.checks=true'
+            mods {
+                relayforge {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title"     : "relay-forge-mod",
+            "Specification-Vendor"    : "catclient2",
+            "Specification-Version"   : "1",
+            "Implementation-Title"    : project.name,
+            "Implementation-Version"  : project.version,
+            "Implementation-Vendor"   : "catclient2",
+            "MixinConfigs"            : "relayforge.mixins.json"
+        ])
+    }
+}

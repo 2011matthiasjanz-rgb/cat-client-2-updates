@@ -29,11 +29,18 @@ public record JoinSession(
     /** routable address for friends outside the host's LAN, empty otherwise. */
     String publicAddress,
     /** the public port; equals {@code port} when no public address is set. */
-    int publicPort
+    int publicPort,
+    /** address of the internet relay (see the {@code friends-relay} module), used as a fallback when
+     *  neither the LAN address nor a UPnP-forwarded public address works; empty otherwise. */
+    String relayAddress,
+    /** the relay's port for this session, exclusively assigned to it. */
+    int relayPort
 ) {
     public JoinSession {
         publicAddress = publicAddress == null ? "" : publicAddress;
+        relayAddress = relayAddress == null ? "" : relayAddress;
         if (publicPort < 0) publicPort = 0;
+        if (relayPort < 0) relayPort = 0;
     }
 
     public int modCount() {

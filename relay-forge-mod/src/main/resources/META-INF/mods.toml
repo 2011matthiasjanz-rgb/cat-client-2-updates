@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "All rights reserved"
+
+[[mixins]]
+config = "relayforge.mixins.json"
+
+[[mods]]
+modId = "relayforge"
+version = "1.0.0"
+displayName = "Cat Client 2 Relay (server-side)"
+description = '''Lets a Cat Client 2 friend's locally hosted world be joined through this server's
+address, without the joiner actually entering this server's own world. Only affects connections that
+present a matching relay token in their handshake; every other connection is handled normally.'''
+
+[[dependencies.relayforge]]
+    modId = "forge"
+    mandatory = true
+    versionRange = "[47,)"
+    ordering = "NONE"
+    side = "SERVER"
+
+[[dependencies.relayforge]]
+    modId = "minecraft"
+    mandatory = true
+    versionRange = "[1.20.1,1.20.2)"
+    ordering = "NONE"
+    side = "SERVER"

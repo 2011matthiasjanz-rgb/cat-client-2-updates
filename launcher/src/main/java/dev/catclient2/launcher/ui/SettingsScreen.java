@@ -7,6 +7,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -26,6 +27,9 @@ public class SettingsScreen extends JPanel {
     private final JButton verifyButton = new JButton("Verify / reinstall files");
     private final JTextField serverUrlField = new JTextField();
     private final JButton applyServerButton = new JButton("Apply");
+    private final JCheckBox ownRelayCheckBox = new JCheckBox("Use my own server as a relay instead");
+    private final JTextField ownRelayField = new JTextField();
+    private final JButton applyRelayButton = new JButton("Apply");
     private final JButton logoutButton = new JButton("Log out");
     private final JButton backButton = new JButton("Back");
     private final JLabel footerLabel = new JLabel(" ", SwingConstants.CENTER);
@@ -52,6 +56,8 @@ public class SettingsScreen extends JPanel {
         content.add(instanceCard());
         content.add(Box.createVerticalStrut(16));
         content.add(friendServiceCard());
+        content.add(Box.createVerticalStrut(16));
+        content.add(relayCard());
 
         JScrollPane scroll = new JScrollPane(content);
         scroll.setOpaque(false);
@@ -153,6 +159,35 @@ public class SettingsScreen extends JPanel {
         return card(inner);
     }
 
+    private JPanel relayCard() {
+        JPanel inner = new JPanel();
+        inner.setLayout(new BoxLayout(inner, BoxLayout.Y_AXIS));
+
+        inner.add(CatClientTheme.sectionHeading("Internet relay"));
+        inner.add(Box.createVerticalStrut(4));
+        inner.add(CatClientTheme.hint("Lets friends join without any port forwarding. By default this"
+            + " uses Cat Client 2's own relay - only change this if you run your own Minecraft server"
+            + " with the relay-forge-mod add-on installed."));
+        inner.add(Box.createVerticalStrut(10));
+
+        ownRelayCheckBox.setOpaque(false);
+        ownRelayCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ownRelayCheckBox.setForeground(CatClientTheme.TEXT_PRIMARY);
+        inner.add(ownRelayCheckBox);
+        inner.add(Box.createVerticalStrut(6));
+
+        JPanel relayRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        relayRow.setOpaque(false);
+        relayRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ownRelayField.setPreferredSize(new Dimension(320, 28));
+        ownRelayField.setToolTipText("host:port of your Minecraft server, e.g. myserver.example.com:25565");
+        relayRow.add(ownRelayField);
+        relayRow.add(applyRelayButton);
+        inner.add(relayRow);
+
+        return card(inner);
+    }
+
     public JButton getBackButton() {
         return backButton;
     }
@@ -183,6 +218,23 @@ public class SettingsScreen extends JPanel {
 
     public void setServerUrl(String url) {
         serverUrlField.setText(url);
+    }
+
+    public JCheckBox getOwnRelayCheckBox() {
+        return ownRelayCheckBox;
+    }
+
+    public JTextField getOwnRelayField() {
+        return ownRelayField;
+    }
+
+    public JButton getApplyRelayButton() {
+        return applyRelayButton;
+    }
+
+    public void setOwnRelay(boolean enabled, String hostPort) {
+        ownRelayCheckBox.setSelected(enabled);
+        ownRelayField.setText(hostPort);
     }
 
     public void setInstanceDirText(String text) {

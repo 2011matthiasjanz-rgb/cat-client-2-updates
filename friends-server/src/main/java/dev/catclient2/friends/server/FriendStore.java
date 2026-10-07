@@ -250,7 +250,7 @@ public class FriendStore {
         JoinSession stored = new JoinSession(session.id(), host, session.minecraftVersion(), session.loader(),
             session.loaderVersion(), session.address(), session.port(), session.mods(),
             session.launcherMinecraftVersion(), session.joinable(), System.currentTimeMillis(), session.note(),
-            session.publicAddress(), session.publicPort());
+            session.publicAddress(), session.publicPort(), session.relayAddress(), session.relayPort());
         sessions.put(host.uuid(), stored);
         save();
         addEvent("session", host.uuid(), host.uuid());

@@ -395,10 +395,12 @@ public class SessionPublisher {
                 this.address = localAddress + ":" + port;
             }
 
-            // Assigned before publishing so a failing HTTP call still leaves a truthful UI state.
+            // Assigned only after a successful publish, so a failing HTTP call leaves current null
+            // and the catch block below can report it truthfully instead of the UI claiming
+            // "published" for a session the server never actually received.
+            friends.publishSession(session);
             this.current = session;
             unavailableReason = null;
-            friends.publishSession(session);
         } finally {
             publishing = false;
             notifyStateChanged();

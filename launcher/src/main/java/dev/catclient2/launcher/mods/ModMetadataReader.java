@@ -167,7 +167,7 @@ public class ModMetadataReader {
     }
 
     private static String string(JsonObject json, String field) {
-        if (!json.has(field) || json.get(field).isJsonNull()) return null;
+        if (json == null || !json.has(field) || json.get(field).isJsonNull()) return null;
         JsonElement element = json.get(field);
         if (!element.isJsonPrimitive()) return null;
         return element.getAsString();

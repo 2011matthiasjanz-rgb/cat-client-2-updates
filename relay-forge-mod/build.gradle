@@ -48,7 +48,11 @@ repositories {
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
+    // Pinned to the exact Forge build the real target server runs (confirmed from its own crash
+    // report: "Forge: net.minecraftforge:47.4.10") - a mismatch here previously caused a
+    // MixinTransformerError that broke unrelated mods (Immersive Engineering, Ars Nouveau, Create,
+    // Ender IO) system-wide, not just this mod, so this version must track the server exactly.
+    minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
 }
 
 jar {

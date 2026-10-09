@@ -89,6 +89,7 @@ public class FriendApi {
 
     public PollResult poll(long since, long waitMillis) throws IOException {
         JsonObject json = get(Api.PATH_EVENTS + "?since=" + since + "&wait=" + waitMillis);
+        if (json == null) return new PollResult(since, List.of());
 
         List<EventView> events = List.of();
         if (json.has("events") && json.get("events").isJsonArray()) {
@@ -132,7 +133,7 @@ public class FriendApi {
 
     public JoinSession sessionOf(String hostUuid) throws IOException {
         JsonObject json = request("GET", Api.PATH_SESSION + "/" + hostUuid, null, true, JsonObject.class);
-        if (!json.has("session") || json.get("session").isJsonNull()) return null;
+        if (json == null || !json.has("session") || json.get("session").isJsonNull()) return null;
         return GSON.fromJson(json.get("session"), JoinSession.class);
     }
 

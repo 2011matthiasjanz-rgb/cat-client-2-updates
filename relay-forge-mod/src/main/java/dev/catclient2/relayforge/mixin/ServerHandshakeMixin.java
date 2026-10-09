@@ -26,9 +26,7 @@ public abstract class ServerHandshakeMixin {
     private static final String RELAY_PREFIX = "catclient2-relay:";
 
     @Accessor("connection")
-    private Connection relayforge$getConnection() {
-        throw new AssertionError();
-    }
+    abstract Connection relayforge$getConnection();
 
     @Inject(method = "handleIntention*", at = @At("HEAD"), cancellable = true)
     private void relayforge$onIntention(ClientIntentionPacket packet, CallbackInfo ci) {

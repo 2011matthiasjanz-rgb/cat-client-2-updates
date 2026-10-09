@@ -30,10 +30,19 @@ public class ReflectInit {
                 throw new RuntimeException("Addon \"%s\" is too old and cannot be ran.".formatted(addon.name), e);
             }
         }
+
+        // The fork's own code (outside the upstream meteordevelopment.meteorclient package covered
+        // by the pseudo addon above, see AddonManager.init()) lives under dev.catclient2 and is not
+        // an addon - register it directly so its own @PreInit/@PostInit/@EventHandler classes
+        // (e.g. ClientSessionState) are actually picked up.
+        add("dev.catclient2");
     }
 
     private static void add(MeteorAddon addon) {
-        String pkg = addon.getPackage();
+        add(addon.getPackage());
+    }
+
+    private static void add(String pkg) {
         if (pkg == null || pkg.isBlank()) return;
         reflections.add(new Reflections(pkg, Scanners.MethodsAnnotated));
     }

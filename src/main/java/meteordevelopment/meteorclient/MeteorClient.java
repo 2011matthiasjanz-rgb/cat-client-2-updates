@@ -111,6 +111,10 @@ public class MeteorClient implements ClientModInitializer {
                 throw new RuntimeException("Addon \"%s\" is too old and cannot be ran.".formatted(addon.name), e);
             }
         });
+        // The fork's own code outside the upstream package above (see ReflectInit.registerPackages())
+        // needs the same registration, otherwise event handlers in dev.catclient2.* (e.g.
+        // ClientSessionState) never actually subscribe.
+        EVENT_BUS.registerLambdaFactory("dev.catclient2", (lookupInMethod, klass) -> (MethodHandles.Lookup) lookupInMethod.invoke(null, klass, MethodHandles.lookup()));
 
         // Register init classes
         ReflectInit.registerPackages();

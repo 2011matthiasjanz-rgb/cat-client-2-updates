@@ -53,6 +53,52 @@ dependencies {
     // MixinTransformerError that broke unrelated mods (Immersive Engineering, Ars Nouveau, Create,
     // Ender IO) system-wide, not just this mod, so this version must track the server exactly.
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.10'
+
+    // Needed to generate the mixin refmap at compile time - without it, @Accessor/@Shadow string
+    // literals (e.g. "channel") stay as dev-mapped names and fail to resolve once reobfuscated for
+    // a real server, which only runs SRG-named fields (confirmed: "channel" reobfuscates to
+    // "f_129468_" per build/createMcpToSrg/output.tsrg - the exact field this mod's accessor needs).
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+// The refmap maps each mixin's dev-mapped (Mojang) names to the SRG names the production server
+// actually uses - createMcpToSrg's output.tsrg is ForgeGradle's own mapping file for this.
+// ForgeGradle 6's own tasks only produce SRG->MCP in the classic .srg format (createSrgToMcp) and
+// MCP->SRG in the newer tsrg2 format (createMcpToSrg) - Mixin AP 0.8.5 needs MCP->SRG in the classic
+// .srg format, which neither task provides directly, so invert createSrgToMcp's output once per build.
+tasks.register('invertSrgMapping') {
+    dependsOn('createSrgToMcp')
+    def input = file('build/createSrgToMcp/output.srg')
+    def output = file('build/mcpToSrgClassic.srg')
+    inputs.file(input)
+    outputs.file(output)
+    doLast {
+        def clPattern = ~/^(CL|FD): (\S+) (\S+)$/
+        def mdPattern = ~/^MD: (\S+) (\S.*\)\S*) (\S+) (\S.*\)\S*)$/
+        output.withWriter('UTF-8') { writer ->
+            input.eachLine { line ->
+                def cl = clPattern.matcher(line)
+                def md = mdPattern.matcher(line)
+                if (cl.matches()) {
+                    writer.writeLine("${cl.group(1)}: ${cl.group(3)} ${cl.group(2)}")
+                } else if (md.matches()) {
+                    writer.writeLine("MD: ${md.group(3)} ${md.group(4)} ${md.group(1)} ${md.group(2)}")
+                } else {
+                    writer.writeLine(line)
+                }
+            }
+        }
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn('invertSrgMapping')
+    doFirst {
+        options.compilerArgs += [
+            "-AreobfSrgFile=${project.file('build/mcpToSrgClassic.srg')}",
+            "-AoutRefMapFile=${project.file('build/resources/main/relayforge.refmap.json')}"
+        ]
+    }
 }
 
 jar {

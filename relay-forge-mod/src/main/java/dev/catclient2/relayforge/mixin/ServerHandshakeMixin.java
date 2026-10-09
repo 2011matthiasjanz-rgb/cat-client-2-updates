@@ -30,7 +30,7 @@ public abstract class ServerHandshakeMixin {
     @Final
     private Connection connection;
 
-    @Inject(method = "handleIntention", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleIntention*", at = @At("HEAD"), cancellable = true)
     private void relayforge$onIntention(ClientIntentionPacket packet, CallbackInfo ci) {
         String hostName = packet.getHostName();
         if (hostName == null) return;

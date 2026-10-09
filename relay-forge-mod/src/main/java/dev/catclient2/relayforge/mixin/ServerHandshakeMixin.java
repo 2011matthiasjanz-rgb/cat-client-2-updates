@@ -8,8 +8,7 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
 import net.minecraft.server.network.ServerHandshakePacketListenerImpl;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -26,15 +25,17 @@ public abstract class ServerHandshakeMixin {
     private static final String REGISTER_PREFIX = "catclient2-register:";
     private static final String RELAY_PREFIX = "catclient2-relay:";
 
-    @Shadow
-    @Final
-    private Connection connection;
+    @Accessor("connection")
+    private Connection relayforge$getConnection() {
+        throw new AssertionError();
+    }
 
     @Inject(method = "handleIntention*", at = @At("HEAD"), cancellable = true)
     private void relayforge$onIntention(ClientIntentionPacket packet, CallbackInfo ci) {
         String hostName = packet.getHostName();
         if (hostName == null) return;
 
+        Connection connection = relayforge$getConnection();
         Channel channel = ((ConnectionAccessor) (Object) connection).relayforge$getChannel();
 
         if (hostName.startsWith(REGISTER_PREFIX)) {
